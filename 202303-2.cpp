@@ -1,50 +1,61 @@
-#include <algorithm>
 #include <iostream>
-#include <limits>
+#include <queue>
+#include <vector>
 
 using namespace std;
 
-bool comparePair(pair<int, float> a, pair<int, float> b) {
-    return a.second < b.second;
-}
+struct Field {
+    int t;  // 开垦耗时
+    int c;  // 缩短一天所需资源数量
+};
 
-bool compare(int a, int b) {
-    return a > b;
-}
+struct Compare {
+    bool operator()(const Field& a, const Field& b) {
+        if (a.t != b.t) {
+            return a.t < b.t;
+        } else {
+            return a.c > b.c;
+        }
+    }
+};
 
 int main() {
     // n 为田地块数，m 为资源数量，k 为最少开垦天数
     int n, m, k;
     cin >> n >> m >> k;
-    // t 为开垦耗时，c 为缩短一天所需资源数量。
-    int t[n], c[n];
-    for (int i = 0; i < n; i++) {
-        cin >> t[i] >> c[i];
-        // 只关注需要缩减的天数
-        t[i] -= k;
+
+    // 田地信息
+    vector<Field> fields(n);
+
+    // 输入田地信息
+    for (int i = 0; i < n; ++i) {
+        cin >> fields[i].t >> fields[i].c;
+        fields[i].t -= k;
     }
-    pair<int, float> cpt[n];
-    for (int i = 0; i < n; i++) {
-        cpt[i].first = i;
-        cpt[i].second = c[i] * 1.0 / t[i];
-    }
-    while (m > 0) {
-        sort(cpt, cpt + n, comparePair);
-        if(cpt[0].second == numeric_limits<int>::max()) break;
-        int cost = t[cpt[0].first] * c[cpt[0].first];
-        if (cost >= m) {
-            int consume = m / c[cpt[0].first];
-            cost = consume * c[cpt[0].first];
-            m -= cost;
-            t[cpt[0].first] -= consume;
+
+    // 创建优先队列，队列中的元素是田地，按照需要开垦的天数从大到小排序，天数相同则资源消耗小的在前
+    priority_queue<Field, vector<Field>, Compare> Q(fields.begin(),
+                                                    fields.end());
+
+    while (!Q.empty() && m > 0) {
+        Field field = Q.top();
+        Q.pop();
+        if (field.t <= 0) {
             break;
+        }
+        // 需要的资源数量
+        int need = field.c;
+        if (m >= need) {
+            m -= need;
+            field.t -= 1;
+            Q.push(field);
         } else {
-            m -= cost;
-            t[cpt[0].first] = 0;
-            cpt[0].second = numeric_limits<int>::max();
+            break;
         }
     }
-    sort(t, t + n, compare);
-    cout << t[0] + k << endl;
+
+    // 输出最大的开垦天数
+    cout << (Q.empty() ? k : Q.top().t + k) << endl;
+
     return 0;
 }
