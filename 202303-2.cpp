@@ -1,61 +1,60 @@
+#include <algorithm>
 #include <iostream>
-#include <queue>
 #include <vector>
 
 using namespace std;
 
-struct Field {
-    int t;  // 开垦耗时
-    int c;  // 缩短一天所需资源数量
+struct field {
+    int t, c;
 };
 
-struct Compare {
-    bool operator()(const Field& a, const Field& b) {
-        if (a.t != b.t) {
-            return a.t < b.t;
-        } else {
-            return a.c > b.c;
-        }
-    }
-};
+bool compare(struct field a, struct field b) {
+    return a.t > b.t;
+}
 
 int main() {
     // n 为田地块数，m 为资源数量，k 为最少开垦天数
     int n, m, k;
     cin >> n >> m >> k;
-
-    // 田地信息
-    vector<Field> fields(n);
-
-    // 输入田地信息
-    for (int i = 0; i < n; ++i) {
-        cin >> fields[i].t >> fields[i].c;
-        fields[i].t -= k;
+    // t 为开垦耗时，c 为缩短一天所需资源数量。
+    vector<struct field> field(n);
+    for (int i = 0; i < n; i++) {
+        cin >> field[i].t >> field[i].c;
+        // 只关注需要缩减的天数
+        field[i].t -= k;
     }
-
-    // 创建优先队列，队列中的元素是田地，按照需要开垦的天数从大到小排序，天数相同则资源消耗小的在前
-    priority_queue<Field, vector<Field>, Compare> Q(fields.begin(),
-                                                    fields.end());
-
-    while (!Q.empty() && m > 0) {
-        Field field = Q.top();
-        Q.pop();
-        if (field.t <= 0) {
+    sort(field.begin(), field.end(), compare);
+    while (m > 0) {
+        if (field[0].t <= 0)
             break;
-        }
-        // 需要的资源数量
-        int need = field.c;
-        if (m >= need) {
-            m -= need;
-            field.t -= 1;
-            Q.push(field);
+        // 考虑有一块以上的田地
+        if (field.size() > 1) {
+            // 首先考虑非平均情况
+            if (field[0].t > field[1].t) {
+                int amount = field[0].t - field[1].t;
+                int price = field[0].c;
+                int cost = amount * price;
+                // 首先检查能否一次扣光
+                if (cost >= m) {
+                    amount = m / price;
+                    field[0].t -= amount;
+                    break;
+                } else {
+                    field[0].t -= amount;
+                    m -= cost;
+                }
+            } else {
+                field[0].c += field[1].c;
+                field.erase(field.begin() + 1);
+            }
         } else {
+            if (field[0].t * field[0].c > m)
+                field[0].t -= m / field[0].c;
+            else
+                field[0].t = 0;
             break;
         }
     }
-
-    // 输出最大的开垦天数
-    cout << (Q.empty() ? k : Q.top().t + k) << endl;
-
+    cout << field[0].t + k << endl;
     return 0;
 }
